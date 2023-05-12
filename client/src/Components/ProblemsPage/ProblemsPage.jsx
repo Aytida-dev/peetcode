@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 
 import "./ProblemsPage.css";
 import { backendUrl } from "../../constants.js";
+import Alert from "../alert/alert";
 
 const ProblemsPage = () => {
   const [CodeSeg, setCodeSeg] = useState("");
@@ -11,6 +12,9 @@ const ProblemsPage = () => {
   const [problem, setProblem] = useState(null);
   const [submission, setSubmission] = useState("");
   const [pastSubmissions, setPastSubmissions] = useState([]);
+  const [submissionError, setSubmissionError] = useState("No Submissions Yet");
+  const [alert, setAlert] = useState(false);
+  const [alertProps, setAlertProps] = useState({});
 
   const initSubmissions = async () => {
     const response = await fetch(`${backendUrl}/submissions/${cleanId}`, {
@@ -21,11 +25,15 @@ const ProblemsPage = () => {
       },
     });
 
-    const json = await response.json();
-    console.log(json);
-    //reverse the array so that the most recent submissions are at the top
+    if(response.status === 200){
+      const json = await response.json();
+      setPastSubmissions(json.submissions.reverse());
+    }
+    else{
+      setSubmissionError("Login to see your submissions");
+    }
 
-    setPastSubmissions(json.submissions.reverse());
+    
   };
 
   useEffect(() => {
@@ -67,10 +75,21 @@ const ProblemsPage = () => {
       body: JSON.stringify({ submission: submission, problemId: cleanId }),
     });
     initSubmissions();
+    setAlertProps({
+      message: "Submission successful",
+      type: "success",
+    })
+    setSubmission("");
+    setAlert(true);
   };
+
+  setTimeout(() => {
+    setAlert(false);
+  }, 2000)
 
   return (
     <div>
+      {alert && <Alert message={alertProps.message} type={alertProps.type} />}
       {problem ? (
         <div id="problempage" className="flex-row">
           <div className="ques">
@@ -87,7 +106,7 @@ const ProblemsPage = () => {
                     return (
                       <div className="eachSubmission" key={index}>
                         <p>{submission.submission}</p>
-                        {/* make color red if submission.status is AC */}
+                        
                         <p
                           style={{
                             color: submission.status === "AC" ? "green" : "red",
@@ -99,7 +118,7 @@ const ProblemsPage = () => {
                     );
                   })
                 ) : (
-                  <div>No Submissions Yet</div>
+                  <div>{submissionError}</div>
                 )}
               </div>
             </div>
@@ -111,6 +130,7 @@ const ProblemsPage = () => {
                 onChange={(e) => setSubmission(e.target.value)}
                 name="SolvedCode"
                 onKeyDown={(event) => handleKey(event)}
+                value={submission}
               ></textarea>
               <button
                 type="submit"
